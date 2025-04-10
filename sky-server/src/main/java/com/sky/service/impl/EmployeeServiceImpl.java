@@ -3,9 +3,11 @@ package com.sky.service.impl;
 import com.sky.constant.MessageConstant;
 import com.sky.constant.PasswordConstant;
 import com.sky.constant.StatusConstant;
+import com.sky.context.BaseContext;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.entity.Employee;
+import com.sky.exception.AccountAlreadyExists;
 import com.sky.exception.AccountLockedException;
 import com.sky.exception.AccountNotFoundException;
 import com.sky.exception.PasswordErrorException;
@@ -67,7 +69,18 @@ public class EmployeeServiceImpl implements EmployeeService {
      * @param employeeDTO
      */
     public void add(EmployeeDTO employeeDTO) {
-        Employee employee = new Employee();
+        String username = employeeDTO.getUsername();
+
+        //1、根据用户名查询数据库中的数据
+        Employee employee = employeeMapper.getByUsername(username);
+
+        //2、处理用户名已存在异常情况
+        if (employee != null) {
+            // 账号已存在
+            throw new AccountAlreadyExists(MessageConstant.ACCOUNT_ALREADY_EXISTS);
+        }
+
+        employee = new Employee();
 
         BeanUtils.copyProperties(employeeDTO, employee);
 
@@ -81,9 +94,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setCreateTime(LocalDateTime.now());
         employee.setUpdateTime(LocalDateTime.now());
 
-        //TODO: 后续需要设置创建人和更新人
-        employee.setCreateUser(10L);
-        employee.setUpdateUser(10L);
+        //动态设置创建人和更新人
+        employee.setCreateUser(BaseContext.getCurrentId());
+        employee.setUpdateUser(BaseContext.getCurrentId());
 
         employeeMapper.insert(employee);
     }
