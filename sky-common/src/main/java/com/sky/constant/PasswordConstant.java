@@ -7,4 +7,6 @@ public class PasswordConstant {
 
     public static final String DEFAULT_PASSWORD = "123456";
 
+    public static final String DISPLAY_PASSWORD = "******";
+
 }

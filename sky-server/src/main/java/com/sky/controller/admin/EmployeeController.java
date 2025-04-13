@@ -1,10 +1,12 @@
 package com.sky.controller.admin;
 
 import com.sky.constant.JwtClaimsConstant;
+import com.sky.constant.PasswordConstant;
 import com.sky.context.BaseContext;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
+import com.sky.dto.PasswordEditDTO;
 import com.sky.entity.Employee;
 import com.sky.properties.JwtProperties;
 import com.sky.result.PageResult;
@@ -68,14 +70,17 @@ public class EmployeeController {
     }
 
     /**
-     * 退出
-     *
+     * 员工退出登录
      * @return
      */
     @PostMapping("/logout")
     @ApiOperation("退出登录")
     public Result<String> logout() {
         log.info("员工{}退出登录", BaseContext.getCurrentId());
+
+        //清除ThreadLocal中的数据
+        BaseContext.removeCurrentId();
+
         return Result.success();
     }
 
@@ -90,6 +95,18 @@ public class EmployeeController {
         log.info("员工{}新增员工：{}", BaseContext.getCurrentId(), employeeDTO);
         employeeService.add(employeeDTO);
         return Result.success();
+    }
+
+    /**
+     * 根据id查询员工信息
+     * @param id
+     * @return
+     */
+    @GetMapping("/{id}")
+    @ApiOperation("根据id查询员工信息")
+    public Result<Employee> queryById(@PathVariable Long id) {
+        log.info("员工{}查询员工信息：id={}", BaseContext.getCurrentId(), id);
+        return Result.success(employeeService.queryById(id));
     }
 
     /**
@@ -114,7 +131,33 @@ public class EmployeeController {
     @ApiOperation("启用、禁用员工账号")
     public Result updateStatus(Long id, @PathVariable Integer status) {
         log.info("员工{}修改员工状态：id={}, status={}", BaseContext.getCurrentId(), id, status);
-        employeeService.updateEmployee(id, status);
+        employeeService.updateStatus(id, status);
+        return Result.success();
+    }
+
+    /**
+     * 修改员工信息
+     * @param employeeDTO
+     * @return
+     */
+    @PutMapping
+    @ApiOperation("修改员工信息")
+    public Result updateEmployee(@RequestBody EmployeeDTO employeeDTO) {
+        log.info("员工{}修改员工信息：{}", BaseContext.getCurrentId(), employeeDTO);
+        employeeService.updateEmployee(employeeDTO);
+        return Result.success();
+    }
+
+    /**
+     * 修改员工密码
+     * @param passwordEditDTO
+     * @return
+     */
+    @PutMapping("/editPassword")
+    @ApiOperation("修改员工密码")
+    public Result editPassword(@RequestBody PasswordEditDTO passwordEditDTO) {
+        log.info("员工{}修改密码：{}", BaseContext.getCurrentId(), passwordEditDTO);
+        employeeService.editPassword(passwordEditDTO);
         return Result.success();
     }
 }

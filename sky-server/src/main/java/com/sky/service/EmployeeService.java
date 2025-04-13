@@ -3,6 +3,7 @@ package com.sky.service;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
+import com.sky.dto.PasswordEditDTO;
 import com.sky.entity.Employee;
 import com.sky.result.PageResult;
 
@@ -22,6 +23,13 @@ public interface EmployeeService {
     void add(EmployeeDTO employeeDTO);
 
     /**
+     * 根据id查询员工信息
+     * @param id
+     * @return
+     */
+    Employee queryById(Long id);
+
+    /**
      * 员工分页查询
      * @param employeePageQueryDTO
      * @return
@@ -34,5 +42,17 @@ public interface EmployeeService {
      * @param status
      * @return
      */
-    void updateEmployee(Long id, Integer status);
+    void updateStatus(Long id, Integer status);
+
+    /**
+     * 修改员工信息
+     * @param employeeDTO
+     */
+    void updateEmployee(EmployeeDTO employeeDTO);
+
+    /**
+     * 修改员工密码
+     * @param passwordEditDTO
+     */
+    void editPassword(PasswordEditDTO passwordEditDTO);
 }
