@@ -11,6 +11,7 @@ public interface EmployeeService {
 
     /**
      * 员工登录
+     *
      * @param employeeLoginDTO
      * @return
      */
@@ -18,12 +19,14 @@ public interface EmployeeService {
 
     /**
      * 添加员工
+     *
      * @param employeeDTO
      */
     void add(EmployeeDTO employeeDTO);
 
     /**
      * 根据id查询员工信息
+     *
      * @param id
      * @return
      */
@@ -31,6 +34,7 @@ public interface EmployeeService {
 
     /**
      * 员工分页查询
+     *
      * @param employeePageQueryDTO
      * @return
      */
@@ -38,6 +42,7 @@ public interface EmployeeService {
 
     /**
      * 启用、禁用员工账号
+     *
      * @param id
      * @param status
      * @return
@@ -46,12 +51,14 @@ public interface EmployeeService {
 
     /**
      * 修改员工信息
+     *
      * @param employeeDTO
      */
     void updateEmployee(EmployeeDTO employeeDTO);
 
     /**
      * 修改员工密码
+     *
      * @param passwordEditDTO
      */
     void editPassword(PasswordEditDTO passwordEditDTO);
