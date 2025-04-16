@@ -52,7 +52,7 @@ public interface DishMapper {
      * @param dish 菜品信息
      * @return 菜品信息
      */
-    List<Dish> selectByCategoryId(Dish dish);
+    List<Dish> list(Dish dish);
 
     /**
      * 根据套餐id查询菜品
@@ -75,4 +75,5 @@ public interface DishMapper {
      */
     @AutoFill(OperationType.UPDATE)
     void update(Dish dish);
+
 }

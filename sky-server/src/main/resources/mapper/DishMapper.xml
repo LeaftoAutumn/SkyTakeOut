@@ -25,7 +25,7 @@
         </where>
         order by name asc
     </select>
-    <select id="selectByCategoryId" resultType="com.sky.entity.Dish">
+    <select id="list" resultType="com.sky.entity.Dish">
         select *
         from dish
         <where>
