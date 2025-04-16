@@ -51,10 +51,10 @@ public class CommonController {
             // 上传文件到阿里云OSS
             String uploadPath = aliOssUtil.upload(file.getBytes(), objectName.toString());
 
-            log.info("上传文件{}到阿里云OSS成功", originalFilename);
+            log.info("上传文件到阿里云OSS成功：{}", originalFilename);
             return Result.success(uploadPath);
         } catch (IOException e) {
-            log.info("上传文件{}到阿里云OSS失败", originalFilename);
+            log.info("上传文件到阿里云OSS失败：{}", originalFilename);
             return Result.error(MessageConstant.UPLOAD_FAILED);
         }
     }

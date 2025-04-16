@@ -89,7 +89,7 @@ public class DishServiceImpl implements DishService {
 
         // 判断是否能被删除---> 1.是否在售
         for (Long id : ids) {
-            Dish dish = dishMapper.selectById(id);
+            Dish dish = dishMapper.selectByDishId(id);
             if (dish.getStatus() == StatusConstant.ENABLE) {
                 throw new RuntimeException(MessageConstant.DISH_ON_SALE);
             }
@@ -109,17 +109,17 @@ public class DishServiceImpl implements DishService {
     }
 
     /**
-     * 根据id查询菜品
-     * @param id
+     * 根据菜品id查询菜品
+     * @param dishId
      * @return
      */
-    public DishVO queryById(Long id) {
+    public DishVO queryByDishId(Long dishId) {
 
         // 查询菜品
-        Dish dish = dishMapper.selectById(id);
+        Dish dish = dishMapper.selectByDishId(dishId);
 
         // 查询口味
-        List<DishFlavor> flavors = dishFlavorMapper.selectByDishId(id);
+        List<DishFlavor> flavors = dishFlavorMapper.selectByDishId(dishId);
 
         // 封装数据
         DishVO dishVO = new DishVO();
@@ -127,6 +127,19 @@ public class DishServiceImpl implements DishService {
         dishVO.setFlavors(flavors);
 
         return dishVO;
+    }
+
+    /**
+     * 根据分类id查询菜品
+     * @param categoryId
+     * @return
+     */
+    public List<Dish> queryByCategoryId(Long categoryId) {
+        Dish dish = Dish.builder()
+                .categoryId(categoryId)
+                .status(StatusConstant.ENABLE)
+                .build();
+        return dishMapper.selectByCategoryId(dish);
     }
 
     /**
@@ -154,7 +167,7 @@ public class DishServiceImpl implements DishService {
      * @param status
      */
     public void dishStatusChange(Long id, Integer status) {
-        Dish dish = dishMapper.selectById(id);
+        Dish dish = dishMapper.selectByDishId(id);
         dish.setStatus(status);
         dishMapper.update(dish);
     }

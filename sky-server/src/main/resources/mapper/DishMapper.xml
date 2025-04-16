@@ -25,6 +25,22 @@
         </where>
         order by name asc
     </select>
+    <select id="selectByCategoryId" resultType="com.sky.entity.Dish">
+        select *
+        from dish
+        <where>
+            <if test="name != null">
+                and name like concat('%', #{name}, '%')
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+        </where>
+        order by name asc
+    </select>
     <delete id="deleteBatch">
         delete from dish
         where id in

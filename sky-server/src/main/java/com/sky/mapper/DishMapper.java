@@ -15,6 +15,29 @@ import java.util.List;
 public interface DishMapper {
 
     /**
+     * 插入菜品
+     *
+     * @param dish 菜品信息
+     */
+    @AutoFill(OperationType.INSERT)
+    void insert(Dish dish);
+
+    /**
+     * 批量删除菜品
+     * @param ids
+     */
+    void deleteBatch(List<Long> ids);
+
+    /**
+     * 根据菜品id查询菜品信息
+     *
+     * @param dishId 菜品id
+     * @return 菜品信息
+     */
+    @Select("select * from dish where id = #{dishId}")
+    Dish selectByDishId(Long dishId);
+
+    /**
      * 根据分类id查询菜品数量
      *
      * @param categoryId
@@ -24,12 +47,20 @@ public interface DishMapper {
     Integer countByCategoryId(Long categoryId);
 
     /**
-     * 插入菜品
+     * 根据分类id查询菜品信息
      *
      * @param dish 菜品信息
+     * @return 菜品信息
      */
-    @AutoFill(OperationType.INSERT)
-    void insert(Dish dish);
+    List<Dish> selectByCategoryId(Dish dish);
+
+    /**
+     * 根据套餐id查询菜品
+     * @param setmealId
+     * @return
+     */
+    @Select("select d.* from dish d inner join setmeal_dish sd on d.id = sd.dish_id where sd.setmeal_id = #{setmealId}")
+    List<Dish> getBySetmealId(Long setmealId);
 
     /**
      * 菜品信息分页查询
@@ -37,21 +68,6 @@ public interface DishMapper {
      * @return
      */
     Page<DishVO> selectByPage(DishPageQueryDTO dishPageQueryDTO);
-
-    /**
-     * 根据id查询菜品信息
-     *
-     * @param id 菜品id
-     * @return 菜品信息
-     */
-    @Select("select * from dish where id = #{id}")
-    Dish selectById(Long id);
-
-    /**
-     * 批量删除菜品
-     * @param ids
-     */
-    void deleteBatch(List<Long> ids);
 
     /**
      * 修改菜品状态
