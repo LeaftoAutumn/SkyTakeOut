@@ -1,6 +1,7 @@
 package com.sky.controller.user;
 
 import com.sky.constant.JwtClaimsConstant;
+import com.sky.context.BaseContext;
 import com.sky.dto.UserLoginDTO;
 import com.sky.entity.User;
 import com.sky.properties.JwtProperties;
@@ -55,5 +56,19 @@ public class UserController {
                 .token(token)
                 .build();
         return Result.success(userLoginVO);
+    }
+
+    /**
+     * 退出登录
+     * @return
+     */
+    @PostMapping("/logout")
+    @ApiOperation("退出登录")
+    public Result<String> logout() {
+        log.info("用户{}退出登录", BaseContext.getCurrentId());
+
+        BaseContext.removeCurrentId();
+
+        return Result.success();
     }
 }
