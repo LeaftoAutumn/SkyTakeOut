@@ -8,9 +8,11 @@ import com.sky.dto.DishDTO;
 import com.sky.dto.DishPageQueryDTO;
 import com.sky.entity.Dish;
 import com.sky.entity.DishFlavor;
+import com.sky.entity.Setmeal;
 import com.sky.mapper.DishFlavorMapper;
 import com.sky.mapper.DishMapper;
 import com.sky.mapper.SetmealDishMapper;
+import com.sky.mapper.SetmealMapper;
 import com.sky.result.PageResult;
 import com.sky.service.DishService;
 import com.sky.vo.DishVO;
@@ -34,6 +36,8 @@ public class DishServiceImpl implements DishService {
     private DishFlavorMapper dishFlavorMapper;
     @Autowired
     private SetmealDishMapper setmealDishMapper;
+    @Autowired
+    private SetmealMapper setmealMapper;
 
     /**
      * 添加菜品相关口味
@@ -61,6 +65,7 @@ public class DishServiceImpl implements DishService {
         // 向菜品表中插入1条数据
         Dish dish = new Dish();
         BeanUtils.copyProperties(dishDTO, dish);
+        dish.setStatus(StatusConstant.DISABLE); // 默认停售
         dishMapper.insert(dish);
 
         // 向口味表中插入n条数据
@@ -164,11 +169,27 @@ public class DishServiceImpl implements DishService {
 
     /**
      * 菜品起售、停售
-     * @param id
+     * @param dishId
      * @param status
      */
-    public void dishStatusChange(Long id, Integer status) {
-        Dish dish = dishMapper.selectByDishId(id);
+    public void dishStatusChange(Long dishId, Integer status) {
+        // 若修改菜品为停售状态，修改关联的套餐状态为停售
+        if (status == StatusConstant.DISABLE) {
+            // 查询套餐id
+            List<Long> ids = setmealDishMapper.getIdsByDishId(dishId);
+            if (ids != null && !ids.isEmpty()) {
+                // 修改套餐状态为停售
+                ids.forEach(id -> {
+                    Setmeal setmeal = setmealMapper.getById(id);
+                    if (setmeal.getStatus() == StatusConstant.ENABLE) {
+                        setmeal.setStatus(StatusConstant.DISABLE);
+                        setmealMapper.update(setmeal);
+                    }
+                });
+            }
+        }
+
+        Dish dish = dishMapper.selectByDishId(dishId);
         dish.setStatus(status);
         dishMapper.update(dish);
     }

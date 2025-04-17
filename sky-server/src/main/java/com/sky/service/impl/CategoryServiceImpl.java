@@ -8,9 +8,12 @@ import com.sky.context.BaseContext;
 import com.sky.dto.CategoryDTO;
 import com.sky.dto.CategoryPageQueryDTO;
 import com.sky.entity.Category;
+import com.sky.entity.Dish;
+import com.sky.entity.Setmeal;
 import com.sky.exception.DeletionNotAllowedException;
 import com.sky.mapper.CategoryMapper;
 import com.sky.mapper.DishMapper;
+import com.sky.mapper.SetmealDishMapper;
 import com.sky.mapper.SetmealMapper;
 import com.sky.result.PageResult;
 import com.sky.service.CategoryService;
@@ -35,6 +38,8 @@ public class CategoryServiceImpl implements CategoryService {
     private DishMapper dishMapper;
     @Autowired
     private SetmealMapper setmealMapper;
+    @Autowired
+    private SetmealDishMapper setmealDishMapper;
 
     /**
      * 新增分类
@@ -118,6 +123,32 @@ public class CategoryServiceImpl implements CategoryService {
      * @param id
      */
     public void startOrStop(Integer status, Long id) {
+
+        // 判断禁用分类时当前分类是否关联了起售中的菜品，如果关联了就抛出业务异常
+        if (status == StatusConstant.DISABLE) {
+            Category category = categoryMapper.getById(id);
+            switch (category.getType()) {
+                case 1 : List<Dish> dishes = dishMapper.listByCategoryId(id);
+                    if (dishes != null && !dishes.isEmpty()) {
+                        for (Dish dish : dishes) {
+                            if (dish.getStatus() == StatusConstant.ENABLE) {
+                                throw new DeletionNotAllowedException(MessageConstant.CATEGORY_BE_RELATED_BY_DISH);
+                            }
+                        }
+                    }
+                    break;
+                case 2 : List<Setmeal> setmeals = setmealMapper.listByCategoryId(id);
+                    if (setmeals != null && !setmeals.isEmpty()) {
+                        for (Setmeal setmeal : setmeals) {
+                            if (setmeal.getStatus() == StatusConstant.ENABLE) {
+                                throw new DeletionNotAllowedException(MessageConstant.CATEGORY_BE_RELATED_BY_SETMEAL);
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+
         Category category = Category.builder()
                 .id(id)
                 .status(status)

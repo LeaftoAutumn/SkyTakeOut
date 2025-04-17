@@ -45,6 +45,8 @@ public class SetmealServiceImpl implements SetmealService {
     public void addSetmeal(SetmealDTO setmealDTO) {
         Setmeal setmeal = new Setmeal();
         BeanUtils.copyProperties(setmealDTO, setmeal);
+        //设置套餐状态为停售
+        setmeal.setStatus(StatusConstant.DISABLE);
 
         //向套餐表插入数据
         setmealMapper.insert(setmeal);

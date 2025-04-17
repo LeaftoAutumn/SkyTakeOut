@@ -76,4 +76,11 @@ public interface DishMapper {
     @AutoFill(OperationType.UPDATE)
     void update(Dish dish);
 
+    /**
+     * 根据分类id查询菜品信息
+     * @param id
+     * @return
+     */
+    @Select("select * from dish where category_id = #{id}")
+    List<Dish> listByCategoryId(Long id);
 }

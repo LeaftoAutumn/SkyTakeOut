@@ -72,9 +72,17 @@ public interface SetmealMapper {
     Page<SetmealVO> pageQuery(SetmealPageQueryDTO setmealPageQueryDTO);
 
     /**
-     * 新增套餐
+     * 更新套餐
      * @param setmeal
      */
     @AutoFill(OperationType.UPDATE)
     void update(Setmeal setmeal);
+
+    /**
+     * 根据分类id查询套餐
+     * @param id
+     * @return
+     */
+    @Select("select * from setmeal where category_id = #{id}")
+    List<Setmeal> listByCategoryId(Long id);
 }
