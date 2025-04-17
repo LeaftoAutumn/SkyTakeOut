@@ -109,6 +109,12 @@ public class DishController {
         }
 
         dishService.updateDishAndFlavor(dishDTO);
+
+        // 清除Redis缓存
+        if (redisTemplate.hasKey(key)) {
+            redisTemplate.delete(key);
+        }
+
         return Result.success();
     }
 
@@ -132,6 +138,12 @@ public class DishController {
         }
 
         dishService.dishStatusChange(id, status);
+
+        // 清除Redis缓存
+        if (redisTemplate.hasKey(key)) {
+            redisTemplate.delete(key);
+        }
+
         return Result.success();
     }
 }
