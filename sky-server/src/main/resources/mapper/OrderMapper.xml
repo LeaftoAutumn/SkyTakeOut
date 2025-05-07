@@ -84,10 +84,10 @@
         select count(distinct user_id)
         from orders
         <where>
-            <if test="startTime">
+            <if test="startTime != null">
                 and order_time &gt;= #{startTime}
             </if>
-            <if test="endTime">
+            <if test="endTime != null">
                 and order_time &lt; #{endTime}
             </if>
         </where>
@@ -97,15 +97,34 @@
         select count(*)
         from orders
         <where>
-            <if test="startTime">
+            <if test="startTime != null">
                 and order_time &gt;= #{startTime}
             </if>
-            <if test="endTime">
+            <if test="endTime != null">
                 and order_time &lt; #{endTime}
             </if>
             <if test="status != null">
                 and status = #{status}
             </if>
         </where>
+    </select>
+    <select id="getSalesTop10ByDate" resultType="com.sky.dto.GoodsSalesDTO">
+        select od.name, count(*) as number
+        from orders as o
+        inner join order_detail as od on o.id = od.order_id
+        <where>
+            <if test="startTime != null">
+                and o.order_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                and o.order_time &lt; #{endTime}
+            </if>
+            <if test="status != null">
+                and o.status = #{status}
+            </if>
+        </where>
+        group by od.name
+        order by number desc, od.name asc
+        limit 10
     </select>
 </mapper>

@@ -1,24 +1,24 @@
 package com.sky.service.impl;
 
+import com.sky.dto.GoodsSalesDTO;
 import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
-import com.sky.vo.OrderReportVO;
-import com.sky.vo.OrderStatisticsVO;
-import com.sky.vo.TurnoverReportVO;
-import com.sky.vo.UserReportVO;
+import com.sky.vo.*;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ReportServiceImpl implements ReportService {
@@ -73,7 +73,7 @@ public class ReportServiceImpl implements ReportService {
             }
 
             if (!date.equals(currentDate)) {
-                redisTemplate.opsForValue().set(key, turnover);
+                redisTemplate.opsForValue().set(key, turnover, Duration.ofDays(1));
             }
             turnoverList.add(turnover);
         }
@@ -136,9 +136,9 @@ public class ReportServiceImpl implements ReportService {
 
             if (!date.equals(currentDate)) {
                 String key = "totalUser_" + date.toString();
-                redisTemplate.opsForValue().set(key, totalUser);
+                redisTemplate.opsForValue().set(key, totalUser, Duration.ofDays(1));
                 key = "newUser_" + date.toString();
-                redisTemplate.opsForValue().set(key, newUser);
+                redisTemplate.opsForValue().set(key, newUser, Duration.ofDays(1));
             }
             totalUserList.add(totalUser);
             newUserList.add(newUser);
@@ -211,9 +211,9 @@ public class ReportServiceImpl implements ReportService {
 
             if (!date.equals(currentDate)) {
                 String key = "orderCount_" + date.toString();
-                redisTemplate.opsForValue().set(key, orderCount);
+                redisTemplate.opsForValue().set(key, orderCount, Duration.ofDays(1));
                 key = "validOrderCount_" + date.toString();
-                redisTemplate.opsForValue().set(key, validOrderCount);
+                redisTemplate.opsForValue().set(key, validOrderCount, Duration.ofDays(1));
             }
             orderCountList.add(orderCount);
             validOrderCountList.add(validOrderCount);
@@ -227,6 +227,55 @@ public class ReportServiceImpl implements ReportService {
                 .totalOrderCount(totalOrderCount)
                 .validOrderCount(totalValidOrderCount)
                 .orderCompletionRate(totalOrderCount == 0 ? 1 : totalValidOrderCount / totalOrderCount.doubleValue())
+                .build();
+    }
+
+    /**
+     * 获取销量前十统计数据
+     * @param begin
+     * @param end
+     * @return
+     */
+    public SalesTop10ReportVO getSalesTop10Statistics(LocalDate begin, LocalDate end) {
+        List<String> productNameList = new ArrayList<>();
+        List<Integer> salesCountList = new ArrayList<>();
+
+        // 更新结束时间为当前时间，后续无订单
+        end = end.isAfter(LocalDate.now()) ? LocalDate.now() : end;
+
+        String key = "salesTop10_" + begin.toString() + "_" + end.toString();
+        // 从缓存中获取数据
+        List<GoodsSalesDTO> redisSalesTop10 = (List<GoodsSalesDTO>) redisTemplate.opsForValue().get(key);
+        if (redisSalesTop10 != null) {
+            for (GoodsSalesDTO map : redisSalesTop10) {
+                productNameList.add(map.getName());
+                salesCountList.add(map.getNumber());
+            }
+            return new SalesTop10ReportVO()
+                    .builder()
+                    .nameList(StringUtils.join(productNameList, ","))
+                    .numberList(StringUtils.join(salesCountList, ","))
+                    .build();
+        }
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("startTime", begin.atStartOfDay());
+        map.put("endTime", end.plusDays(1).atStartOfDay());
+        map.put("status", Orders.COMPLETED);
+
+        // 获取销量前十
+        List<GoodsSalesDTO> salesTop10 = orderMapper.getSalesTop10ByDate(map);
+        for (GoodsSalesDTO sales : salesTop10) {
+            productNameList.add(sales.getName());
+            salesCountList.add(sales.getNumber());
+        }
+        // 将销量前十存入缓存
+        redisTemplate.opsForValue().set(key, salesTop10, Duration.ofMinutes(1));
+
+        return new SalesTop10ReportVO()
+                .builder()
+                .nameList(StringUtils.join(productNameList, ","))
+                .numberList(StringUtils.join(salesCountList, ","))
                 .build();
     }
 

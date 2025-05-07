@@ -1,6 +1,7 @@
 package com.sky.mapper;
 
 import com.github.pagehelper.Page;
+import com.sky.dto.GoodsSalesDTO;
 import com.sky.dto.OrdersPageQueryDTO;
 import com.sky.entity.Orders;
 import org.apache.ibatis.annotations.Mapper;
@@ -52,29 +53,36 @@ public interface OrderMapper {
     Integer countStatus(Integer status);
 
     /**
-     * 根据状态和截止时间查询订单
+     * 根据状态和起止时间查询订单
      */
     @Select("select * from orders where status = #{status} and order_time < #{deadline}")
     List<Orders> queryOrdersByStatusAndDeadline(Integer status, LocalDateTime deadline);
 
     /**
-     * 根据状态和截止时间查询订单数量
+     * 根据状态和起止时间查询订单数量
      * @param map
      * @return
      */
     Double getTurnoverByDate(Map<String, Object> map);
 
     /**
-     * 根据状态和截止时间获取当日用户总量
+     * 根据状态和起止时间获取当日用户总量
      * @param map
      * @return
      */
     Integer getTotalUserByDate(Map<String, Object> map);
 
     /**
-     * 根据状态和截止时间获取当日订单总量
+     * 根据状态和起止时间获取当日订单总量
      * @param map
      * @return
      */
     Integer getOrderCountByDate(Map<String, Object> map);
+
+    /**
+     * 根据状态和起止时间获取当日销量前十
+     * @param map
+     * @return
+     */
+    List<GoodsSalesDTO> getSalesTop10ByDate(Map<String, Object> map);
 }
