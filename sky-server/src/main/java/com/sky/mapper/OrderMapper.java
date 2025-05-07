@@ -70,4 +70,11 @@ public interface OrderMapper {
      * @return
      */
     Integer getTotalUserByDate(Map<String, Object> map);
+
+    /**
+     * 根据状态和截止时间获取当日订单总量
+     * @param map
+     * @return
+     */
+    Integer getOrderCountByDate(Map<String, Object> map);
 }

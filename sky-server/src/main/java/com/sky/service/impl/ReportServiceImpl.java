@@ -4,6 +4,8 @@ import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
+import com.sky.vo.OrderReportVO;
+import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.TurnoverReportVO;
 import com.sky.vo.UserReportVO;
 import org.apache.commons.lang.StringUtils;
@@ -148,6 +150,83 @@ public class ReportServiceImpl implements ReportService {
                 .dateList(StringUtils.join(dateList, ","))
                 .totalUserList(StringUtils.join(totalUserList, ","))
                 .newUserList(StringUtils.join(newUserList, ","))
+                .build();
+    }
+
+    /**
+     * 获取订单统计数据
+     * @param begin
+     * @param end
+     * @return
+     */
+    @Override
+    public OrderReportVO getOrderStatistics(LocalDate begin, LocalDate end) {
+        List<LocalDate> dateList = getDateList(begin, end);
+        List<Integer> orderCountList = new ArrayList<>();
+        List<Integer> validOrderCountList = new ArrayList<>();
+        Integer totalOrderCount = 0;
+        Integer totalValidOrderCount = 0;
+
+        LocalDate currentDate = LocalDate.now();
+        for (LocalDate date : dateList) {
+            // 如果日期大于当前日期，则订单总数和有效订单数为0
+            if (date.isAfter(currentDate)) {
+                orderCountList.add(0);
+                validOrderCountList.add(0);
+                continue;
+            }
+            // 如果日期小于当前日期，则从尝试从缓存中获取订单总数和有效订单数
+            if (!date.equals(currentDate)) {
+                // 获取缓存的key
+                String key = "orderCount_" + date.toString();
+                // 从缓存中获取数据
+                Integer redisOrderCount = (Integer) redisTemplate.opsForValue().get(key);
+                if (redisOrderCount != null) {
+                    orderCountList.add(redisOrderCount);
+                    totalOrderCount += redisOrderCount;
+                }
+                key = "validOrderCount_" + date.toString();
+                Integer redisValidOrderCount = (Integer) redisTemplate.opsForValue().get(key);
+                if (redisValidOrderCount != null) {
+                    validOrderCountList.add(redisValidOrderCount);
+                    totalValidOrderCount += redisValidOrderCount;
+                    continue;
+                }
+            }
+
+            LocalDateTime startTime = date.atStartOfDay();
+            LocalDateTime endTime = date.plusDays(1).atStartOfDay();
+
+            Map<String, Object> map = new HashMap<>();
+            map.put("startTime", startTime);
+            map.put("endTime", endTime);
+
+            // 获取订单总数
+            Integer orderCount = orderMapper.getOrderCountByDate(map);
+            totalOrderCount += orderCount;
+            // 获取有效订单数
+            map.put("status", Orders.COMPLETED);
+            Integer validOrderCount = orderMapper.getOrderCountByDate(map);
+            totalValidOrderCount += validOrderCount;
+
+            if (!date.equals(currentDate)) {
+                String key = "orderCount_" + date.toString();
+                redisTemplate.opsForValue().set(key, orderCount);
+                key = "validOrderCount_" + date.toString();
+                redisTemplate.opsForValue().set(key, validOrderCount);
+            }
+            orderCountList.add(orderCount);
+            validOrderCountList.add(validOrderCount);
+        }
+
+        return new OrderReportVO()
+                .builder()
+                .dateList(StringUtils.join(dateList, ","))
+                .orderCountList(StringUtils.join(orderCountList, ","))
+                .validOrderCountList(StringUtils.join(validOrderCountList, ","))
+                .totalOrderCount(totalOrderCount)
+                .validOrderCount(totalValidOrderCount)
+                .orderCompletionRate(totalOrderCount == 0 ? 1 : totalValidOrderCount / totalOrderCount.doubleValue())
                 .build();
     }
 
