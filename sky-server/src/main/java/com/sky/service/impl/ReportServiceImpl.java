@@ -5,12 +5,19 @@ import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
+import com.sky.service.WorkspaceService;
 import com.sky.vo.*;
 import org.apache.commons.lang.StringUtils;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,7 +25,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class ReportServiceImpl implements ReportService {
@@ -27,6 +33,8 @@ public class ReportServiceImpl implements ReportService {
     private OrderMapper orderMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private WorkspaceService workspaceService;
     @Autowired
     private RedisTemplate redisTemplate;
 
@@ -287,5 +295,70 @@ public class ReportServiceImpl implements ReportService {
             dateList.add(begin);
         }
         return dateList;
+    }
+
+    /**
+     * 导出运营数据报表
+     * @param response
+     */
+    public void export(HttpServletResponse response) {
+        // 1、获取起止时间
+        // 1.1、获取当前时间
+        LocalDate currentDate = LocalDate.now();
+        // 1.2、获取30天前的时间
+        LocalDate begin = currentDate.minusDays(30);
+
+        // 2、通过POI将数据写入Excel文件
+        // 2.1、获取Excel模板
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("template/Operational data report.xlsx");
+        try {
+            // 创建POI对象
+            XSSFWorkbook xssfWorkbook = new XSSFWorkbook(inputStream);
+            // 获取模板所在页sheet
+            XSSFSheet sheet = xssfWorkbook.getSheetAt(0);
+
+            // 设置sheet名称
+            xssfWorkbook.setSheetName(0, "运营数据报表");
+
+            // 设置报表统计的时间区间
+            sheet.getRow(1).getCell(1).setCellValue("统计时间区间" + begin + "至" + currentDate);
+
+            // 获取近30天的营业数据统计（概览数据）
+            BusinessDataVO businessData = workspaceService.getBusinessData(begin.atStartOfDay(), currentDate.plusDays(1).atStartOfDay());
+            // 设置概览数据
+            sheet.getRow(3).getCell(2).setCellValue(businessData.getTurnover());
+            sheet.getRow(3).getCell(4).setCellValue(businessData.getOrderCompletionRate());
+            sheet.getRow(3).getCell(6).setCellValue(businessData.getNewUsers());
+            sheet.getRow(4).getCell(2).setCellValue(businessData.getValidOrderCount());
+            sheet.getRow(4).getCell(4).setCellValue(businessData.getUnitPrice());
+
+            // 获取近30天每天的营业数据统计（明细数据）
+            for (int i = 0; i < 30; i++) {
+                // 获取每天的营业数据统计
+                businessData = workspaceService.getBusinessData(currentDate.atStartOfDay(), currentDate.plusDays(1).atStartOfDay());
+                // 设置每天的营业数据统计
+                sheet.getRow(i + 7).getCell(1).setCellValue(currentDate.toString());
+                sheet.getRow(i + 7).getCell(2).setCellValue(businessData.getTurnover());
+                sheet.getRow(i + 7).getCell(3).setCellValue(businessData.getValidOrderCount());
+                sheet.getRow(i + 7).getCell(4).setCellValue(businessData.getOrderCompletionRate());
+                sheet.getRow(i + 7).getCell(5).setCellValue(businessData.getUnitPrice());
+                sheet.getRow(i + 7).getCell(6).setCellValue(businessData.getNewUsers());
+
+                currentDate = currentDate.minusDays(1);
+            }
+
+            // 3、将文件写入到浏览器
+            ServletOutputStream outputStream = response.getOutputStream();
+            xssfWorkbook.write(outputStream);
+
+            // 关闭资源
+            inputStream.close();
+            xssfWorkbook.close();
+            outputStream.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
     }
 }
