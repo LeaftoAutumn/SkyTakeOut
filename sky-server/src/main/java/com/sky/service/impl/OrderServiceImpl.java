@@ -14,8 +14,10 @@ import com.sky.entity.*;
 import com.sky.exception.AddressBookBusinessException;
 import com.sky.exception.OrderBusinessException;
 import com.sky.mapper.*;
+import com.sky.result.PageResult;
 import com.sky.service.OrderService;
 import com.sky.utils.HttpClientUtil;
+import com.sky.utils.SnCalUtil;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
@@ -28,8 +30,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.sky.result.PageResult;
+
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,6 +47,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private WeChatPayUtil weChatPayUtil;
+    @Autowired
+    private SnCalUtil snCalUtil;
     @Autowired
     private OrderMapper orderMapper;
     @Autowired
@@ -57,9 +66,12 @@ public class OrderServiceImpl implements OrderService {
     private String shopAddress;
     @Value("${sky.baidu.ak}")
     private String ak;
+    @Value("${sky.baidu.sk}")
+    private String sk;
 
     /**
      * 用户下单
+     *
      * @param ordersSubmitDTO
      * @return
      */
@@ -83,7 +95,11 @@ public class OrderServiceImpl implements OrderService {
             throw new AddressBookBusinessException(MessageConstant.SHOPPING_CART_IS_NULL);
         }
         // 3.检查用户的收货地址是否超出配送范围
-        checkOutOfRange(addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail());
+        try {
+            checkOutOfRange(addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail());
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
 
         // 向订单表插入1条数据
         Orders orders = new Orders();
@@ -514,21 +530,77 @@ public class OrderServiceImpl implements OrderService {
         orderMapper.update(orders);
     }
 
+    // 需要添加sn参数生成逻辑（示例代码）
+    private String generateSN(Map<String, String> params, String sk) throws UnsupportedEncodingException {
+        // 1. 参数按key字典序排序
+        List<String> keys = new ArrayList<>(params.keySet());
+        Collections.sort(keys);
+
+        // 2. 拼接queryString
+        StringBuilder sb = new StringBuilder();
+        for (String key : keys) {
+            sb.append(key).append("=").append(URLEncoder.encode(params.get(key), String.valueOf(StandardCharsets.UTF_8))).append("&");
+        }
+        String queryString = sb.substring(0, sb.length() - 1);
+
+        // 3. 计算sn
+        String wholeStr = "/geocoding/v3?" + queryString + sk; // 注意接口路径
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            return byteToHex(md.digest(wholeStr.getBytes()));
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("MD5计算失败", e);
+        }
+    }
+
+    // 辅助方法：字节转十六进制
+    private static String byteToHex(byte[] bytes) {
+        StringBuilder hex = new StringBuilder();
+        for (byte b : bytes) {
+            hex.append(String.format("%02x", b));
+        }
+        return hex.toString();
+    }
+
+    public static void main(String[] args) throws UnsupportedEncodingException,
+            NoSuchAlgorithmException {
+
+
+    }
+
     /**
      * 检查客户的收货地址是否超出配送范围
+     *
      * @param address
      */
-    private void checkOutOfRange(String address) {
-        Map map = new HashMap();
-        map.put("address",shopAddress);
-        map.put("output","json");
-        map.put("ak",ak);
+    private void checkOutOfRange(String address) throws UnsupportedEncodingException {
 
-        //获取店铺的经纬度坐标
+        // 计算sn跟参数对出现顺序有关，get请求请使用LinkedHashMap保存<key,value>，该方法根据key的插入顺序排序；post请使用TreeMap保存<key,value>，该方法会自动将key按照字母a-z顺序排序。
+        // 所以get请求可自定义参数顺序（sn参数必须在最后）发送请求，但是post请求必须按照字母a-z顺序填充body（sn参数必须在最后）。
+        // 以get请求为例：http://api.map.baidu.com/geocoder/v2/?address=百度大厦&output=json&ak=yourak，paramsMap中先放入address，再放output，然后放ak，放入顺序必须跟get请求中对应参数的出现顺序保持一致。
+        Map<String, String> map = new HashMap<>();
+        map.put("address", shopAddress);
+        map.put("output", "json");
+        map.put("ak", ak);
+
+        // 调用下面的toQueryString方法，对LinkedHashMap内所有value作utf8编码，拼接返回结果address=%E7%99%BE%E5%BA%A6%E5%A4%A7%E5%8E%A6&output=json&ak=yourak
+        String mapStr = snCalUtil.toQueryString(map);
+
+        // 对paramsStr前面拼接上/geocoder/v2/?，后面直接拼接yoursk得到/geocoder/v2/?address=%E7%99%BE%E5%BA%A6%E5%A4%A7%E5%8E%A6&output=json&ak=yourakyoursk
+        String wholeStr = new String("/geocoder/v3/?" + mapStr + sk);
+
+        // 对上面wholeStr再作utf8编码
+        String tempStr = URLEncoder.encode(wholeStr, "UTF-8");
+
+        // 调用下面的MD5方法得到最后的sn签名7de5a22212ffaa9e326444c75a58f9a0
+        String sn = snCalUtil.MD5(tempStr);
+        map.put("sn", sn); // 添加sn参数
+
+        // 再发送请求
         String shopCoordinate = HttpClientUtil.doGet("https://api.map.baidu.com/geocoding/v3", map);
 
         JSONObject jsonObject = JSON.parseObject(shopCoordinate);
-        if(!jsonObject.getString("status").equals("0")){
+        if (!jsonObject.getString("status").equals("0")) {
             throw new OrderBusinessException("店铺地址解析失败");
         }
 
@@ -539,12 +611,26 @@ public class OrderServiceImpl implements OrderService {
         //店铺经纬度坐标
         String shopLngLat = lat + "," + lng;
 
-        map.put("address",address);
+        map.put("address", address);
+
+        // 调用下面的toQueryString方法，对LinkedHashMap内所有value作utf8编码，拼接返回结果address=%E7%99%BE%E5%BA%A6%E5%A4%A7%E5%8E%A6&output=json&ak=yourak
+        mapStr = snCalUtil.toQueryString(map);
+
+        // 对paramsStr前面拼接上/geocoder/v2/?，后面直接拼接yoursk得到/geocoder/v2/?address=%E7%99%BE%E5%BA%A6%E5%A4%A7%E5%8E%A6&output=json&ak=yourakyoursk
+        wholeStr = new String("/geocoder/v2/?" + mapStr + sk);
+
+        // 对上面wholeStr再作utf8编码
+        tempStr = URLEncoder.encode(wholeStr, "UTF-8");
+
+        // 调用下面的MD5方法得到最后的sn签名7de5a22212ffaa9e326444c75a58f9a0
+        sn = snCalUtil.MD5(tempStr);
+        map.put("sn", sn); // 添加sn参数
+
         //获取用户收货地址的经纬度坐标
         String userCoordinate = HttpClientUtil.doGet("https://api.map.baidu.com/geocoding/v3", map);
 
         jsonObject = JSON.parseObject(userCoordinate);
-        if(!jsonObject.getString("status").equals("0")){
+        if (!jsonObject.getString("status").equals("0")) {
             throw new OrderBusinessException("收货地址解析失败");
         }
 
@@ -555,15 +641,28 @@ public class OrderServiceImpl implements OrderService {
         //用户收货地址经纬度坐标
         String userLngLat = lat + "," + lng;
 
-        map.put("origin",shopLngLat);
-        map.put("destination",userLngLat);
-        map.put("steps_info","0");
+        map.put("origin", shopLngLat);
+        map.put("destination", userLngLat);
+        map.put("steps_info", "0");
+
+        // 调用下面的toQueryString方法，对LinkedHashMap内所有value作utf8编码，拼接返回结果address=%E7%99%BE%E5%BA%A6%E5%A4%A7%E5%8E%A6&output=json&ak=yourak
+        mapStr = snCalUtil.toQueryString(map);
+
+        // 对paramsStr前面拼接上/geocoder/v2/?，后面直接拼接yoursk得到/geocoder/v2/?address=%E7%99%BE%E5%BA%A6%E5%A4%A7%E5%8E%A6&output=json&ak=yourakyoursk
+        wholeStr = new String("/geocoder/v2/?" + mapStr + sk);
+
+        // 对上面wholeStr再作utf8编码
+        tempStr = URLEncoder.encode(wholeStr, "UTF-8");
+
+        // 调用下面的MD5方法得到最后的sn签名7de5a22212ffaa9e326444c75a58f9a0
+        sn = snCalUtil.MD5(tempStr);
+        map.put("sn", sn); // 添加sn参数
 
         //路线规划
         String json = HttpClientUtil.doGet("https://api.map.baidu.com/directionlite/v1/driving", map);
 
         jsonObject = JSON.parseObject(json);
-        if(!jsonObject.getString("status").equals("0")){
+        if (!jsonObject.getString("status").equals("0")) {
             throw new OrderBusinessException("配送路线规划失败");
         }
 
@@ -572,7 +671,7 @@ public class OrderServiceImpl implements OrderService {
         JSONArray jsonArray = (JSONArray) result.get("routes");
         Integer distance = (Integer) ((JSONObject) jsonArray.get(0)).get("distance");
 
-        if(distance > 5000){
+        if (distance > 5000) {
             //配送距离超过5000米
             throw new OrderBusinessException("超出配送范围");
         }
@@ -580,6 +679,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 客户催单
+     *
      * @param id
      */
     public void reminder(Long id) {
