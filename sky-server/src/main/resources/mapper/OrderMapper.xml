@@ -79,4 +79,17 @@
             </if>
         </where>
     </select>
+
+    <select id="getTotalUserByDate" resultType="java.lang.Integer">
+        select count(distinct user_id)
+        from orders
+        <where>
+            <if test="startTime">
+                and order_time &gt;= #{startTime}
+            </if>
+            <if test="endTime">
+                and order_time &lt; #{endTime}
+            </if>
+        </where>
+    </select>
 </mapper>

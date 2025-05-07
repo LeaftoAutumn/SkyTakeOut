@@ -63,4 +63,11 @@ public interface OrderMapper {
      * @return
      */
     Double getTurnoverByDate(Map<String, Object> map);
+
+    /**
+     * 根据状态和截止时间获取当日用户总量
+     * @param map
+     * @return
+     */
+    Integer getTotalUserByDate(Map<String, Object> map);
 }
