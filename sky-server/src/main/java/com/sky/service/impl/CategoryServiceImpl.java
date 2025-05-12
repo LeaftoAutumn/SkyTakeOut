@@ -125,13 +125,13 @@ public class CategoryServiceImpl implements CategoryService {
     public void startOrStop(Integer status, Long id) {
 
         // 判断禁用分类时当前分类是否关联了起售中的菜品，如果关联了就抛出业务异常
-        if (status == StatusConstant.DISABLE) {
+        if (status.equals(StatusConstant.DISABLE)) {
             Category category = categoryMapper.getById(id);
             switch (category.getType()) {
                 case 1 : List<Dish> dishes = dishMapper.listByCategoryId(id);
                     if (dishes != null && !dishes.isEmpty()) {
                         for (Dish dish : dishes) {
-                            if (dish.getStatus() == StatusConstant.ENABLE) {
+                            if (dish.getStatus().equals(StatusConstant.ENABLE)) {
                                 throw new DeletionNotAllowedException(MessageConstant.CATEGORY_BE_RELATED_BY_DISH);
                             }
                         }
@@ -140,7 +140,7 @@ public class CategoryServiceImpl implements CategoryService {
                 case 2 : List<Setmeal> setmeals = setmealMapper.listByCategoryId(id);
                     if (setmeals != null && !setmeals.isEmpty()) {
                         for (Setmeal setmeal : setmeals) {
-                            if (setmeal.getStatus() == StatusConstant.ENABLE) {
+                            if (setmeal.getStatus().equals(StatusConstant.ENABLE)) {
                                 throw new DeletionNotAllowedException(MessageConstant.CATEGORY_BE_RELATED_BY_SETMEAL);
                             }
                         }

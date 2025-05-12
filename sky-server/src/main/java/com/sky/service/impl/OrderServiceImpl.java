@@ -159,7 +159,7 @@ public class OrderServiceImpl implements OrderService {
                 user.getOpenid() //微信用户的openid
         );
 
-        if (jsonObject.getString("code") != null && jsonObject.getString("code").equals("ORDERPAID")) {
+        if (jsonObject.getString("code") != null && "ORDERPAID".equals(jsonObject.getString("code"))) {
             throw new OrderBusinessException("该订单已支付");
         }
 
@@ -435,7 +435,7 @@ public class OrderServiceImpl implements OrderService {
 
         //支付状态
         Integer payStatus = ordersDB.getPayStatus();
-        if (payStatus == Orders.PAID) {
+        if (payStatus.equals(Orders.PAID)) {
             //用户已支付，需要退款
             String refund = weChatPayUtil.refund(
                     ordersDB.getNumber(),
@@ -600,7 +600,7 @@ public class OrderServiceImpl implements OrderService {
         String shopCoordinate = HttpClientUtil.doGet("https://api.map.baidu.com/geocoding/v3", map);
 
         JSONObject jsonObject = JSON.parseObject(shopCoordinate);
-        if (!jsonObject.getString("status").equals("0")) {
+        if (!"0".equals(jsonObject.getString("status"))) {
             throw new OrderBusinessException("店铺地址解析失败");
         }
 
@@ -630,7 +630,7 @@ public class OrderServiceImpl implements OrderService {
         String userCoordinate = HttpClientUtil.doGet("https://api.map.baidu.com/geocoding/v3", map);
 
         jsonObject = JSON.parseObject(userCoordinate);
-        if (!jsonObject.getString("status").equals("0")) {
+        if (!"0".equals(jsonObject.getString("status"))) {
             throw new OrderBusinessException("收货地址解析失败");
         }
 
@@ -662,7 +662,7 @@ public class OrderServiceImpl implements OrderService {
         String json = HttpClientUtil.doGet("https://api.map.baidu.com/directionlite/v1/driving", map);
 
         jsonObject = JSON.parseObject(json);
-        if (!jsonObject.getString("status").equals("0")) {
+        if (!"0".equals(jsonObject.getString("status"))) {
             throw new OrderBusinessException("配送路线规划失败");
         }
 

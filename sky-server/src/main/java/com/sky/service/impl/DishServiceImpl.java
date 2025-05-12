@@ -96,7 +96,7 @@ public class DishServiceImpl implements DishService {
         // 判断是否能被删除---> 1.是否在售
         for (Long id : ids) {
             Dish dish = dishMapper.selectByDishId(id);
-            if (dish.getStatus() == StatusConstant.ENABLE) {
+            if (dish.getStatus().equals(StatusConstant.ENABLE)) {
                 throw new RuntimeException(MessageConstant.DISH_ON_SALE);
             }
         }
@@ -174,14 +174,14 @@ public class DishServiceImpl implements DishService {
      */
     public void dishStatusChange(Long dishId, Integer status) {
         // 若修改菜品为停售状态，修改关联的套餐状态为停售
-        if (status == StatusConstant.DISABLE) {
+        if (status.equals(StatusConstant.DISABLE)) {
             // 查询套餐id
             List<Long> ids = setmealDishMapper.getIdsByDishId(dishId);
             if (ids != null && !ids.isEmpty()) {
                 // 修改套餐状态为停售
                 ids.forEach(id -> {
                     Setmeal setmeal = setmealMapper.getById(id);
-                    if (setmeal.getStatus() == StatusConstant.ENABLE) {
+                    if (setmeal.getStatus().equals(StatusConstant.ENABLE)) {
                         setmeal.setStatus(StatusConstant.DISABLE);
                         setmealMapper.update(setmeal);
                     }

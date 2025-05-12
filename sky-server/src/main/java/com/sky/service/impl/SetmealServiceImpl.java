@@ -85,7 +85,7 @@ public class SetmealServiceImpl implements SetmealService {
     public void deleteBatch(List<Long> ids) {
         ids.forEach(id -> {
             Setmeal setmeal = setmealMapper.getById(id);
-            if(setmeal.getStatus() == StatusConstant.ENABLE){
+            if(setmeal.getStatus().equals(StatusConstant.ENABLE)){
                 //起售中的套餐不能删除
                 throw new DeletionNotAllowedException(MessageConstant.SETMEAL_ON_SALE);
             }
@@ -170,11 +170,11 @@ public class SetmealServiceImpl implements SetmealService {
      */
     public void startOrStop(Integer status, Long id) {
         //起售套餐时，判断套餐内是否有停售菜品，有停售菜品提示"套餐内包含未启售菜品，无法启售"
-        if(status == StatusConstant.ENABLE){
+        if(status.equals(StatusConstant.ENABLE)){
             List<Dish> dishList = dishMapper.getBySetmealId(id);
             if(dishList != null && !dishList.isEmpty()){
                 dishList.forEach(dish -> {
-                    if(dish.getStatus() == StatusConstant.DISABLE){
+                    if(dish.getStatus().equals(StatusConstant.DISABLE)){
                         throw new SetmealEnableFailedException(MessageConstant.SETMEAL_ENABLE_FAILED);
                     }
                 });
